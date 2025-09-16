@@ -30,27 +30,24 @@ def clean_airports(airports_df):
     # Make a copy to avoid modifying the original
     df = airports_df.copy()
     
-    # TODO: Remove rows with missing latitude or longitude
-    # Hint: Use .dropna(subset=['latitude', 'longitude'])
-    # df = df.dropna(subset=['latitude', 'longitude'])
+    # 1️⃣ Remove rows with missing latitude or longitude
+    df = df.dropna(subset=['latitude', 'longitude'])
     
-    # TODO: Remove airports with invalid coordinates
-    # Latitude should be between -90 and 90
-    # Longitude should be between -180 and 180
-    # Hint: df = df[(df['latitude'] >= -90) & (df['latitude'] <= 90)]
-    # Hint: df = df[(df['longitude'] >= -180) & (df['longitude'] <= 180)]
+    # 2️⃣ Remove airports with invalid coordinates
+    df = df[(df['latitude'] >= -90) & (df['latitude'] <= 90)]
+    df = df[(df['longitude'] >= -180) & (df['longitude'] <= 180)]
     
-    # TODO: Handle missing IATA codes (replace empty strings or 'N' with None)
-    # Hint: df['iata_code'] = df['iata_code'].replace(['', 'N', '\\N'], None)
+    # 3️⃣ Handle missing IATA codes
+    df['iata_code'] = df['iata_code'].replace(['', 'N', '\\N'], None)
     
-    # TODO: Convert altitude to numeric (handle non-numeric values)
-    # Hint: df['altitude'] = pd.to_numeric(df['altitude'], errors='coerce')
+    # 4️⃣ Convert altitude to numeric (coerce errors)
+    df['altitude'] = pd.to_numeric(df['altitude'], errors='coerce')
     
-    # TODO: Print how many airports remain after cleaning
-    # print(f"After cleaning: {len(df)} airports remain")
+    # 5️⃣ Print how many airports remain after cleaning
+    print(f"✅ After cleaning: {len(df)} airports remain")
     
-    print("⚠️  Airport cleaning not yet implemented")
     return df
+
 
 def clean_flights(flights_df):
     """
@@ -69,49 +66,41 @@ def clean_flights(flights_df):
     print(f"🧹 Cleaning flight data...")
     print(f"Starting with {len(flights_df)} flights")
     
-    # The OpenSky API returns data as a list of lists without column names
-    # We need to assign proper column names
+    # Columns we want to keep
     expected_columns = [
-        'icao24',           # Unique aircraft identifier
-        'callsign',         # Flight callsign
-        'origin_country',   # Country of aircraft registration
-        'time_position',    # Unix timestamp of position
-        'last_contact',     # Unix timestamp of last contact
-        'longitude',        # Aircraft longitude
-        'latitude',         # Aircraft latitude
-        'altitude',         # Aircraft altitude in meters
-        'on_ground',        # Boolean: is aircraft on ground
-        'velocity',         # Ground speed in m/s
-        'true_track',       # Aircraft heading in degrees
-        'vertical_rate'     # Vertical speed in m/s
+        'icao24', 'callsign', 'origin_country', 'time_position',
+        'last_contact', 'longitude', 'latitude', 'altitude',
+        'on_ground', 'velocity', 'true_track', 'vertical_rate'
     ]
     
-    # Make a copy to avoid modifying the original
+    # Make a copy
     df = flights_df.copy()
     
-    # TODO: Assign column names to the DataFrame
-    # Hint: df.columns = expected_columns
+    # Keep only the first 12 columns (matching expected_columns)
+    df = df.iloc[:, :len(expected_columns)]
     
-    # TODO: Remove flights with missing coordinates
-    # Hint: df = df.dropna(subset=['longitude', 'latitude'])
+    # Assign proper column names
+    df.columns = expected_columns
     
-    # TODO: Convert altitude from meters to feet (multiply by 3.28084)
-    # This makes it easier to understand for aviation
-    # Hint: df['altitude'] = df['altitude'] * 3.28084
+    # Remove flights with missing coordinates
+    df = df.dropna(subset=['longitude', 'latitude'])
     
-    # TODO: Remove flights with invalid coordinates
-    # Same coordinate bounds as airports
-    # Hint: df = df[(df['latitude'] >= -90) & (df['latitude'] <= 90)]
-    # Hint: df = df[(df['longitude'] >= -180) & (df['longitude'] <= 180)]
+    # Convert altitude from meters to feet
+    df['altitude'] = df['altitude'] * 3.28084
     
-    # TODO: Clean callsign (remove extra whitespace)
-    # Hint: df['callsign'] = df['callsign'].str.strip()
+    # Remove flights with invalid coordinates
+    df = df[(df['latitude'] >= -90) & (df['latitude'] <= 90)]
+    df = df[(df['longitude'] >= -180) & (df['longitude'] <= 180)]
     
-    # TODO: Print how many flights remain after cleaning
-    # print(f"After cleaning: {len(df)} flights remain")
+    # Clean callsign
+    df['callsign'] = df['callsign'].str.strip().replace('', None)
     
-    print("⚠️  Flight cleaning not yet implemented")
+    # Print how many flights remain
+    print(f"✅ After cleaning: {len(df)} flights remain")
+    
     return df
+
+
 
 def combine_data(airports_df, flights_df):
     """
