@@ -24,9 +24,8 @@ def extract_airports():
         # TODO: Read the airports.csv file using pandas
         # The file is located at: data/airports.csv
         # Hint: Use pd.read_csv()
-        
-        # For now, return an empty DataFrame
-        df = pd.DataFrame()
+
+        df = pd.read_csv("/home/barnabe/ETL-AirLife/data/airports.csv")
         
         # TODO: Print how many airports were loaded
         # Example: print(f"Loaded {len(df)} airports")
@@ -63,9 +62,19 @@ def extract_flights():
         
         # TODO: Make the API request using requests.get()
         # Hint: response = requests.get(url, params=params, timeout=10)
+
+        response = requests.get(url, params=params, timeout=10)
         
         # TODO: Check if the response is successful
         # Hint: Check response.status_code == 200
+
+        if response.status_code == 200:
+            # Response is successful
+            # Proceed to process the data
+            pass
+        else:
+            print(f"⚠️ API returned status code: {response.status_code}")
+            return pd.DataFrame()
         
         # TODO: Get the JSON data from the response
         # Hint: data = response.json()
