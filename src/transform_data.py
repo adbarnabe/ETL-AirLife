@@ -29,89 +29,69 @@ def clean_airports(airports_df):
     
     # Make a copy to avoid modifying the original
     df = airports_df.copy()
+
+    # Remove rows with missing coordinates
+    df = df.dropna(subset=['latitude', 'longitude'])
     
-    # TODO: Remove rows with missing latitude or longitude
-    # Hint: Use .dropna(subset=['latitude', 'longitude'])
-    # df = df.dropna(subset=['latitude', 'longitude'])
-    
-    # TODO: Remove airports with invalid coordinates
+    # Remove airports with invalid coordinates
     # Latitude should be between -90 and 90
     # Longitude should be between -180 and 180
-    # Hint: df = df[(df['latitude'] >= -90) & (df['latitude'] <= 90)]
-    # Hint: df = df[(df['longitude'] >= -180) & (df['longitude'] <= 180)]
+    df = df[(df['latitude'] >= -90) & (df['latitude'] <= 90)]
+    df = df[(df['longitude'] >= -180) & (df['longitude'] <= 180)]
     
-    # TODO: Handle missing IATA codes (replace empty strings or 'N' with None)
-    # Hint: df['iata_code'] = df['iata_code'].replace(['', 'N', '\\N'], None)
+    # Handle missing IATA codes (replace empty strings or 'N' with None)
+    if 'iata_code' in df.columns:
+        df['iata_code'] = df['iata_code'].replace(['', 'N', '\\N'], None)
     
     # TODO: Convert altitude to numeric (handle non-numeric values)
-    # Hint: df['altitude'] = pd.to_numeric(df['altitude'], errors='coerce')
+    if 'altitude' in df.columns:
+        df['altitude'] = pd.to_numeric(df['altitude'], errors='coerce')
     
-    # TODO: Print how many airports remain after cleaning
-    # print(f"After cleaning: {len(df)} airports remain")
-    
-    print("⚠️  Airport cleaning not yet implemented")
+    # Print how many airports remain after cleaning
+    print(f"After cleaning: {len(df)} airports remain")
+
     return df
 
 def clean_flights(flights_df):
-    """
-    Clean and standardize flight data from API
-    
-    Args:
-        flights_df (pandas.DataFrame): Raw flight data from API
-        
-    Returns:
-        pandas.DataFrame: Cleaned flight data with proper column names
-    """
     if flights_df.empty:
-        print("⚠️  No flight data to clean")
+        print("⚠️ No flight data to clean")
         return flights_df
-    
+
     print(f"🧹 Cleaning flight data...")
     print(f"Starting with {len(flights_df)} flights")
     
-    # The OpenSky API returns data as a list of lists without column names
-    # We need to assign proper column names
+    df = flights_df.copy()
+
+    # Full 17 columns from OpenSky API
     expected_columns = [
-        'icao24',           # Unique aircraft identifier
-        'callsign',         # Flight callsign
-        'origin_country',   # Country of aircraft registration
-        'time_position',    # Unix timestamp of position
-        'last_contact',     # Unix timestamp of last contact
-        'longitude',        # Aircraft longitude
-        'latitude',         # Aircraft latitude
-        'altitude',         # Aircraft altitude in meters
-        'on_ground',        # Boolean: is aircraft on ground
-        'velocity',         # Ground speed in m/s
-        'true_track',       # Aircraft heading in degrees
-        'vertical_rate'     # Vertical speed in m/s
+        'icao24', 'callsign', 'origin_country', 'time_position', 'last_contact',
+        'longitude', 'latitude', 'altitude', 'on_ground', 'velocity',
+        'true_track', 'vertical_rate', 'sensors', 'geo_altitude', 'squawk',
+        'spi', 'position_source'
     ]
     
-    # Make a copy to avoid modifying the original
-    df = flights_df.copy()
-    
-    # TODO: Assign column names to the DataFrame
-    # Hint: df.columns = expected_columns
-    
-    # TODO: Remove flights with missing coordinates
-    # Hint: df = df.dropna(subset=['longitude', 'latitude'])
-    
-    # TODO: Convert altitude from meters to feet (multiply by 3.28084)
-    # This makes it easier to understand for aviation
-    # Hint: df['altitude'] = df['altitude'] * 3.28084
-    
-    # TODO: Remove flights with invalid coordinates
-    # Same coordinate bounds as airports
-    # Hint: df = df[(df['latitude'] >= -90) & (df['latitude'] <= 90)]
-    # Hint: df = df[(df['longitude'] >= -180) & (df['longitude'] <= 180)]
-    
-    # TODO: Clean callsign (remove extra whitespace)
-    # Hint: df['callsign'] = df['callsign'].str.strip()
-    
-    # TODO: Print how many flights remain after cleaning
-    # print(f"After cleaning: {len(df)} flights remain")
-    
-    print("⚠️  Flight cleaning not yet implemented")
+    if df.shape[1] == len(expected_columns):
+        df.columns = expected_columns
+    else:
+        print(f"⚠️ Column count mismatch ({df.shape[1]} != {len(expected_columns)})")
+        return pd.DataFrame()
+
+    # Remove flights with missing coordinates
+    df = df.dropna(subset=['longitude', 'latitude'])
+
+    # Keep only valid coordinates
+    df = df[(df['latitude'] >= -90) & (df['latitude'] <= 90)]
+    df = df[(df['longitude'] >= -180) & (df['longitude'] <= 180)]
+
+    # Convert altitude from meters to feet
+    df['altitude'] = pd.to_numeric(df['altitude'], errors='coerce') * 3.28084
+
+    # Clean callsign
+    df['callsign'] = df['callsign'].astype(str).str.strip()
+
+    print(f"After cleaning: {len(df)} flights remain")
     return df
+
 
 def combine_data(airports_df, flights_df):
     """
@@ -199,5 +179,18 @@ if __name__ == "__main__":
     # Test airport cleaning
     cleaned_airports = clean_airports(sample_airports)
     validate_data_quality(cleaned_airports, 'airports')
+
+    print("\n---\n")
+    
+    # Sample flight data for testing
+    sample_flights = pd.DataFrame([
+        ['abc123', 'FL123', 'CountryA', 1600000000, 1600000100, 10.0, 50.0, 1000, False, 200, 90, 5, None, 1200, '7000', False, 0],
+        ['def456', 'FL456', 'CountryB', 1600000000, 1600000100, -200.0, 95.0, 500, False, 150, 180, -3, None, 800, '7001', False, 0], # invalid lon
+        ['ghi789', None, 'CountryC', 1600000000, 1600000100, 5.0, 91.0, None, False, 100, 270, 2, None, None, '7002', False, 0]         # invalid lat
+    ])
+    
+    # Test flight cleaning
+    cleaned_flights = clean_flights(sample_flights)
+    validate_data_quality(cleaned_flights, 'flights')
     
     print("\nTransformation testing complete!")
