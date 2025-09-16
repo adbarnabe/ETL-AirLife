@@ -16,27 +16,31 @@ def extract_airports():
     Extract airport data from CSV file
     
     Returns:
-        pandas.DataFrame: Airport data with columns like name, city, country, coordinates
+        pandas.DataFrame: Airport data with standardized columns
     """
     print("📄 Reading airport data from CSV...")
-    
+
     try:
-        # TODO: Read the airports.csv file using pandas
-        # The file is located at: data/airports.csv
-        # Hint: Use pd.read_csv()
-        
-        # For now, return an empty DataFrame
-        df = pd.DataFrame()
-        
-        # TODO: Print how many airports were loaded
-        # Example: print(f"Loaded {len(df)} airports")
-        
-        print("⚠️  Airport extraction not yet implemented")
+        # Load the CSV
+        df = pd.read_csv("/home/jmaubian/SDD/fsd312/ETL-AirLife/data/airports.csv")
+
+        # If the file doesn’t have headers, assign standard ones
+        expected_columns = [
+            "id", "name", "city", "country", "iata", "icao",
+            "latitude", "longitude", "altitude", "timezone",
+            "dst", "tz_database_time_zone", "type", "source"
+        ]
+
+        if len(df.columns) == len(expected_columns):
+            df.columns = expected_columns
+
+        print(f"Loaded {len(df)} airports")
         return df
-        
+
     except Exception as e:
         print(f"❌ Error reading airport data: {e}")
         return pd.DataFrame()
+
 
 def extract_flights():
     """
@@ -46,50 +50,47 @@ def extract_flights():
         pandas.DataFrame: Flight data with current aircraft positions
     """
     print("🌐 Fetching live flight data from API...")
-    
-    # API endpoint for OpenSky Network
+
     url = "https://opensky-network.org/api/states/all"
-    
-    # Parameters to limit to a smaller area (Europe) to reduce data size
     params = {
         'lamin': 45,  # South boundary (latitude)
         'lomin': 5,   # West boundary (longitude) 
         'lamax': 50,  # North boundary (latitude)
         'lomax': 15   # East boundary (longitude)
     }
-    
+
     try:
         print("Making API request... (this may take a few seconds)")
+        response = requests.get(url, params=params, timeout=10)
+
+        if response.status_code != 200:
+            print(f"⚠️ API returned status code: {response.status_code}")
+            return pd.DataFrame()
+
+        data = response.json()
+        states = data.get("states", []) or []   # safe lookup
+
+        columns = [
+            "icao24", "callsign", "origin_country", "time_position", "last_contact",
+            "longitude", "latitude", "baro_altitude", "on_ground", "velocity",
+            "true_track", "vertical_rate", "sensors", "geo_altitude", "squawk",
+            "spi", "position_source"
+        ]
+
+        # handle case where columns mismatch
+        df = pd.DataFrame(states, columns=columns[:len(states[0])] if states else columns)
+
+        print(f"Found {len(df)} active flights")
         
-        # TODO: Make the API request using requests.get()
-        # Hint: response = requests.get(url, params=params, timeout=10)
-        
-        # TODO: Check if the response is successful
-        # Hint: Check response.status_code == 200
-        
-        # TODO: Get the JSON data from the response
-        # Hint: data = response.json()
-        
-        # TODO: Extract the 'states' data from the JSON
-        # The API returns: {"time": 123456789, "states": [[aircraft_data], [aircraft_data], ...]}
-        # Hint: states = data['states'] if data['states'] else []
-        
-        # TODO: Convert to DataFrame
-        # Hint: df = pd.DataFrame(states)
-        
-        # TODO: Print how many flights were found
-        # Example: print(f"Found {len(df)} active flights")
-        
-        # For now, return empty DataFrame
-        print("⚠️  Flight extraction not yet implemented")
-        return pd.DataFrame()
-        
+        return df
+
     except requests.exceptions.RequestException as e:
         print(f"❌ Network error fetching flight data: {e}")
         return pd.DataFrame()
     except Exception as e:
         print(f"❌ Error processing flight data: {e}")
         return pd.DataFrame()
+
 
 def test_api_connection():
     """
