@@ -21,24 +21,24 @@ def extract_airports():
     print("📄 Reading airport data from CSV...")
     
     try:
-        # TODO: Read the airports.csv file using pandas
-        # The file is located at: data/airports.csv
-        # Hint: Use pd.read_csv()
+        # Lire le fichier CSV
+        df = pd.read_csv("data/airports.csv")
         
-        # For now, return an empty DataFrame
-        df = pd.DataFrame()
+        # Afficher combien d'aéroports ont été chargés
+        print(f"✅ Loaded {len(df)} airports")
         
-        # TODO: Print how many airports were loaded
-        # Example: print(f"Loaded {len(df)} airports")
-        
-        print("⚠️  Airport extraction not yet implemented")
         return df
+        
+    except FileNotFoundError:
+        print("❌ Error: 'data/airports.csv' not found")
+        return pd.DataFrame()
         
     except Exception as e:
         print(f"❌ Error reading airport data: {e}")
         return pd.DataFrame()
 
-def extract_flights():
+
+def extract_flights(): 
     """
     Extract current flight data from OpenSky Network API
     
@@ -47,42 +47,39 @@ def extract_flights():
     """
     print("🌐 Fetching live flight data from API...")
     
-    # API endpoint for OpenSky Network
+    # API endpoint
     url = "https://opensky-network.org/api/states/all"
     
-    # Parameters to limit to a smaller area (Europe) to reduce data size
+    # Parameters for Europe to reduce data size
     params = {
-        'lamin': 45,  # South boundary (latitude)
-        'lomin': 5,   # West boundary (longitude) 
-        'lamax': 50,  # North boundary (latitude)
-        'lomax': 15   # East boundary (longitude)
+        'lamin': 45,  # South latitude
+        'lomin': 5,   # West longitude
+        'lamax': 50,  # North latitude
+        'lomax': 15   # East longitude
     }
     
     try:
         print("Making API request... (this may take a few seconds)")
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()  # lève une erreur si code HTTP != 200
         
-        # TODO: Make the API request using requests.get()
-        # Hint: response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+        states = data.get('states', [])
         
-        # TODO: Check if the response is successful
-        # Hint: Check response.status_code == 200
+        if not states:
+            print("⚠️ No flights found")
+            return pd.DataFrame()
         
-        # TODO: Get the JSON data from the response
-        # Hint: data = response.json()
+        # Convert to DataFrame
+        df = pd.DataFrame(states, columns=[
+            "icao24", "callsign", "origin_country", "time_position", "last_contact",
+            "longitude", "latitude", "baro_altitude", "on_ground", "velocity",
+            "heading", "vertical_rate", "sensors", "geo_altitude", "squawk",
+            "spi", "position_source"
+        ])
         
-        # TODO: Extract the 'states' data from the JSON
-        # The API returns: {"time": 123456789, "states": [[aircraft_data], [aircraft_data], ...]}
-        # Hint: states = data['states'] if data['states'] else []
-        
-        # TODO: Convert to DataFrame
-        # Hint: df = pd.DataFrame(states)
-        
-        # TODO: Print how many flights were found
-        # Example: print(f"Found {len(df)} active flights")
-        
-        # For now, return empty DataFrame
-        print("⚠️  Flight extraction not yet implemented")
-        return pd.DataFrame()
+        print(f"✅ Found {len(df)} active flights")
+        return df
         
     except requests.exceptions.RequestException as e:
         print(f"❌ Network error fetching flight data: {e}")
@@ -90,6 +87,7 @@ def extract_flights():
     except Exception as e:
         print(f"❌ Error processing flight data: {e}")
         return pd.DataFrame()
+
 
 def test_api_connection():
     """
